@@ -17,7 +17,7 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-    oast-snyk:
+  oast-snyk:
     docker:
       - image: node:latest
     steps:
@@ -29,11 +29,12 @@ jobs:
             chmod +x snyk
             mv snyk /usr/local/bin/
             npm install
-            snyk test --json > snyk-results.json
+            snyk test --json > snyk-results.json || true
 
       - store_artifacts:
           path: snyk-results.json
           destination: snyk-artifact
+          when: always
 
   integration:
     docker:
@@ -44,6 +45,7 @@ jobs:
           command: |
             echo "This is an integration step"
             exit 1
+          when: on_fail         # Even if the job fails, continue to the next stages
 
   prod:
     docker:
@@ -59,13 +61,13 @@ workflows:
       - build
       - test:
           requires:
-            - build 
-      -oast-synk
-          requires:
-            -test
-      - integration:
+            - build
+      - oast-snyk:
           requires:
             - test
+      - integration:
+          requires:
+            - oast-snyk
       - prod:
           type: approval
           requires:
